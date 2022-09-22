@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css" />
+    <title>조선의 궁궐에 당도한걸 환영하오 낯선이여</title>
+    <style>
+      code {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+
+        -ms-word-break: break-all;
+        word-break: break-all;
+        word-break: break-word;
+
+        -ms-hyphens: auto;
+        -moz-hyphens: auto;
+        -webkit-hyphens: auto;
+        hyphens: auto;
+      }
+
+      .container {
+        padding: 16px;
+      }
+
+      .top-marign {
+        margin-top: 32px;
+      }
+
+      #correct {
+        display: none;
+        color: greenyellow;
+      }
+
+      #wrong {
+        display: none;
+        color: orangered;
+      }
+
+      #progressBar {
+        width: 100%;
+        height: 1rem;
+      }
+
+      #progressBar::-webkit-progress-value {
+        transition: width 1s ease-in-out;
+      }
+
+      #code-viewer {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div>
+        <!-- Modal -->
+        <dialog id="modal-about">
+          <article>
+            <a href="#close" aria-label="Close" class="close" data-target="modal-about" onClick="toggleModal(event)">
+            </a>
+            <h3>정보</h3>
+            <p>제작: aroxu</p>
+            <p>중요한 말씀 출처: <a href="https://api.adviceslip.com/" _blank>https://api.adviceslip.com/</a></p>
+            <footer>
+              <a href="#confirm" role="button" data-target="modal-about" onClick="toggleModal(event)">확인</a>
+            </footer>
+          </article>
+        </dialog>
+        <nav>
+          <ul>
+            <li><strong>Solve the problem</strong></li>
+          </ul>
+          <ul>
+            <li>
+              <a href="#" role="button" data-target="modal-about" onClick="toggleModal(event)"> 정보</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <div>
+        <form onsubmit="return false">
+          <label for="input-code">아래에 코드를 입력하세요</label>
+          <input type="password" id="input-code" name="input-code" placeholder="코드 입력" required />
+          <br />
+          <span id="wrong">올바르지 않은 코드입니다!</span>
+          <span id="correct">올바른 코드입니다.</span>
+
+          <article>
+            <header>아래 사항을 참조해주세요.</header>
+            <ul>
+              <li>모든 사람이 가지게 되는 코드는 전부 다릅니다.</li>
+              <li>공지에 이 문제를 해결하기 위한 도구가 있습니다.</li>
+            </ul>
+          </article>
+
+          <!-- Button -->
+          <button id="submit" onclick="onSubmit()">제출</button>
+        </form>
+      </div>
+      <a id="codeview">
+        <div id="code-viewer">
+          <header>당신이 제출한 코드 기반으로 아래의 코드를 도출하였습니다..!</header>
+          <code id="viewer"></code>
+        </div>
+      </a>
+      <br />
+      <div>
+        <header>중요한 말씀</header>
+        <blockquote id="slip">"If you get stuck, try doing the opposite of what the solution requires."</blockquote>
+        <progress id="progressBar" value="1" max="100"></progress>
+      </div>
+    </div>
+    <script>
+      var showedHint = true;
+
+      const _sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+
+      const sleep = async (milisecond) => {
+        await _sleep(milisecond);
+      };
+
+      function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        const result = Math.floor(Math.random() * (max - min)) + min; //최댓값은 제외, 최솟값은 포함
+        return result;
+      }
+
+      function setSlip() {
+        document.getElementById("progressBar").value = 0;
+        function randomSlip() {
+          showedHint = false;
+          fetch("https://api.adviceslip.com/advice")
+            .then((response) => response.json())
+            .then((data) => (document.getElementById("slip").innerHTML = `"${data.slip.advice}"`));
+        }
+        if (showedHint === true) {
+          randomSlip();
+        } else if (getRandomInt(0, 10) !== 0) {
+          randomSlip();
+        } else {
+          showedHint = true;
+          document.getElementById("slip").innerHTML = `"How about using <mark>BCrypt</mark>"`;
+        }
+        var i = 0;
+        function move() {
+          if (i == 0) {
+            i = 1;
+            var elem = document.getElementById("progressBar");
+            var width = 1;
+            var id = setInterval(frame, 1000);
+            function frame() {
+              if (width > 10) {
+                clearInterval(id);
+                i = 0;
+              } else {
+                width++;
+                elem.value = width * 10;
+              }
+            }
+          }
+        }
+        move();
+      }
+      setSlip();
+      setInterval(setSlip, 10000);
+
+      function onSubmit() {
+        const codeView = document.getElementById("input-code");
+        if (codeView.value.trim() !== "") {
+          document.getElementById("submit").setAttribute("aria-busy", true);
+          fetch(`https://alt.aroxu.me/quiz/submit?code=${document.getElementById("input-code").value}`)
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.result === false) {
+                document.getElementById("correct").style.display = "none";
+                document.getElementById("wrong").style.display = "inline";
+              } else if (data.result === true) {
+                document.getElementById("wrong").style.display = "none";
+                document.getElementById("correct").style.display = "inline";
+                document.getElementById("viewer").textContent = data.data;
+                document.getElementById("code-viewer").style.display = "inline";
+                document
+                  .getElementById("codeview")
+                  .scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+              }
+            })
+            .then(() => {
+              stopLoading();
+            });
+        }
+      }
+
+      function stopLoading() {
+        document.getElementById("submit").setAttribute("aria-busy", false);
+      }
+    </script>
+    <script>
+      /*
+       * Modal
+       *
+       * Pico.css - https://picocss.com
+       * Copyright 2019-2022 - Licensed under MIT
+       */
+
+      // Config
+      const isOpenClass = "modal-is-open";
+      const openingClass = "modal-is-opening";
+      const closingClass = "modal-is-closing";
+      const animationDuration = 400; // ms
+      let visibleModal = null;
+
+      // Toggle modal
+      const toggleModal = (event) => {
+        event.preventDefault();
+        const modal = document.getElementById(event.currentTarget.getAttribute("data-target"));
+        typeof modal != "undefined" && modal != null && isModalOpen(modal) ? closeModal(modal) : openModal(modal);
+      };
+
+      // Is modal open
+      const isModalOpen = (modal) => {
+        return modal.hasAttribute("open") && modal.getAttribute("open") != "false" ? true : false;
+      };
+
+      // Open modal
+      const openModal = (modal) => {
+        if (isScrollbarVisible()) {
+          document.documentElement.style.setProperty("--scrollbar-width", `${getScrollbarWidth()}px`);
+        }
+        document.documentElement.classList.add(isOpenClass, openingClass);
+        setTimeout(() => {
+          visibleModal = modal;
+          document.documentElement.classList.remove(openingClass);
+        }, animationDuration);
+        modal.setAttribute("open", true);
+      };
+
+      // Close modal
+      const closeModal = (modal) => {
+        visibleModal = null;
+        document.documentElement.classList.add(closingClass);
+        setTimeout(() => {
+          document.documentElement.classList.remove(closingClass, isOpenClass);
+          document.documentElement.style.removeProperty("--scrollbar-width");
+          modal.removeAttribute("open");
+        }, animationDuration);
+      };
+
+      // Close with a click outside
+      document.addEventListener("click", (event) => {
+        if (visibleModal != null) {
+          const modalContent = visibleModal.querySelector("article");
+          const isClickInside = modalContent.contains(event.target);
+          !isClickInside && closeModal(visibleModal);
+        }
+      });
+
+      // Close with Esc key
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && visibleModal != null) {
+          closeModal(visibleModal);
+        }
+      });
+
+      // Get scrollbar width
+      const getScrollbarWidth = () => {
+        // Creating invisible container
+        const outer = document.createElement("div");
+        outer.style.visibility = "hidden";
+        outer.style.overflow = "scroll"; // forcing scrollbar to appear
+        outer.style.msOverflowStyle = "scrollbar"; // needed for WinJS apps
+        document.body.appendChild(outer);
+
+        // Creating inner element and placing it in the container
+        const inner = document.createElement("div");
+        outer.appendChild(inner);
+
+        // Calculating difference between container's full width and the child width
+        const scrollbarWidth = outer.offsetWidth - inner.offsetWidth;
+
+        // Removing temporary elements from the DOM
+        outer.parentNode.removeChild(outer);
+
+        return scrollbarWidth;
+      };
+
+      // Is scrollbar visible
+      const isScrollbarVisible = () => {
+        return document.body.scrollHeight > screen.height;
+      };
+    </script>
+  </body>
+</html>
